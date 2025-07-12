@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -12,30 +12,32 @@ origins = [
     "https://quizoq.netlify.app",
     "http://localhost"
 ]
-# Load environment variables from .env if present (local dev)
 load_dotenv()
 
-# Now get the API key from environment (works for both prod and local)
 api_key = os.getenv("GROQ_API_KEY")
 if not api_key:
     raise RuntimeError("GROQ_API_KEY not set in environment variables.")
 
 client = Groq(api_key=api_key)
-@app.get("/")
-def ping():
-    return {"ping": "pong"}
-
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,            # Only allow listed origins
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],              # Allow all HTTP methods
-    allow_headers=["*"],              # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class QuizRequest(BaseModel):
     text: str
+    num_questions: int = 4
+    difficulty: str = "medium"
+    num_options: int = 4
+    question_type: str = "mcq"  # "mcq", "truefalse", "mixed"
+
+@app.get("/")
+def ping():
+    return {"ping": "pong"}
 
 @app.post("/generate-quiz")
 async def generate_quiz(req: QuizRequest):
@@ -44,23 +46,87 @@ async def generate_quiz(req: QuizRequest):
         return {"quiz": []}
 
     joined_paragraphs = "\n\n---\n\n".join(paragraphs)
-    prompt = f"""
-You are an intelligent exam assistant. From the paragraphs below, generate 2 multiple-choice questions (MCQs) **for each paragraph**.
 
-Each MCQ must have:
-- A question based on facts in the paragraph
-- Four options (A, B, C, D)
-- Exactly one correct answer
-- Clearly labeled answer (e.g., Answer: A)
-
-Format strictly like:
+    # Build prompt based on question_type and num_options
+    if req.question_type == "truefalse":
+        qtype_str = "true/false questions"
+        format_str = """
 Question: ...
 Options:
-A ...
-B ...
-C ...
-D ...
+A) True
+B) False
 Answer: ...
+"""
+    elif req.question_type == "mcq":
+        qtype_str = f"multiple-choice questions (MCQs) with {req.num_options} options"
+        options_letters = [chr(65 + i) for i in range(req.num_options)]
+        options_format = '\n'.join([f"{l}) ..." for l in options_letters])
+        format_str = f"""
+Question: ...
+Options:
+{options_format}
+Answer: ...
+"""
+    elif req.question_type == "mcq_multiple":
+        qtype_str = "multiple-choice questions (MCQs) with multiple correct answers. Indicate all correct answers."
+        options_letters = [chr(65 + i) for i in range(req.num_options)]
+        options_format = '\n'.join([f"{l}) ..." for l in options_letters])
+        format_str = f"""
+Question: ...
+Options:
+{options_format}
+Answer: ... (e.g., A, C)
+"""
+    elif req.question_type == "fillblanks":
+        qtype_str = f"fill in the blank questions."
+        format_str = """
+Question: ... (The blank should be represented by an underscore or bracketed empty space like [_] or [])
+Answer: ...
+"""
+    elif req.question_type == "faq":
+        qtype_str = "frequently asked questions (FAQ)."
+        format_str = """
+Question: ...
+Answer: ...
+"""
+    elif req.question_type == "short":
+        qtype_str = "short answer questions."
+        format_str = """
+Question: ...
+Answer: ...
+"""
+    elif req.question_type == "higherorder":
+        qtype_str = "higher-order thinking questions requiring reasoning and synthesis."
+        format_str = """
+Question: ...
+Answer: ...
+"""
+    else:
+        qtype_str = f"a mix of MCQs (with {req.num_options} options) and true/false questions"
+        options_letters = [chr(65 + i) for i in range(req.num_options)]
+        options_format = '\n'.join([f"{l}) ..." for l in options_letters])
+        format_str = f"""
+Question: ...
+Options (for MCQ):
+{options_format}
+or
+Options (for True/False):
+A) True
+B) False
+Answer: ...
+"""
+
+    prompt = f"""
+You are an intelligent exam assistant. From the paragraphs below, generate a total of {req.num_questions} {qtype_str} at **{req.difficulty}** difficulty level. Distribute the questions across the paragraphs as evenly as possible.
+
+Each question must have:
+- A question based on facts in the paragraph
+- Options as specified below (if applicable)
+- Exactly one correct answer (unless the question type is 'mcq_multiple')
+- Clearly labeled answer(s) (e.g., Answer: A or Answer: A, C)
+
+Format strictly like:
+{format_str}
 
 Paragraphs:
 {joined_paragraphs}
@@ -73,9 +139,8 @@ Paragraphs:
         max_tokens=2048
     )
 
-    # Parse the response into a list of questions (optional: improve formatting as needed)
     quiz_text = response.choices[0].message.content.strip()
     return {"quiz": quiz_text}
 
 # To run the server:
-# uvicorn your_filename:app --reload --port 8000
+# uvicorn app:app --reload --port 8000
