@@ -16,7 +16,8 @@ if not api_key:
 client = Groq(api_key=api_key)
 app = FastAPI()
 origins = [
-    "http://localhost:3000",  # Allow React dev server
+    "http://localhost:3000",
+    "https://quizoq.netlify.app/"  # Allow React dev server
     "http://localhost",       # Optional: allow other localhost origins
 ]
 
