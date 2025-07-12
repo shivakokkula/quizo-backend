@@ -1,14 +1,18 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from dotenv import load_dotenv
 from groq import Groq
-import os
 
-# Load your Groq API key from environment variable or .env file
-os.environ["GROQ_API_KEY"] = "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"
+# Load environment variables from .env if present (local dev)
+load_dotenv()
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+# Now get the API key from environment (works for both prod and local)
+api_key = os.getenv("GROQ_API_KEY")
+if not api_key:
+    raise RuntimeError("GROQ_API_KEY not set in environment variables.")
 
+client = Groq(api_key=api_key)
 app = FastAPI()
 origins = [
     "http://localhost:3000",  # Allow React dev server
