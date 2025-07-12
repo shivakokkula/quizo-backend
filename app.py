@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from groq import Groq
+import os
 
 # Load environment variables from .env if present (local dev)
 load_dotenv()
