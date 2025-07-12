@@ -12,6 +12,19 @@ origins = [
     "https://quizoq.netlify.app",
     "http://localhost"
 ]
+# Load environment variables from .env if present (local dev)
+load_dotenv()
+
+# Now get the API key from environment (works for both prod and local)
+api_key = os.getenv("GROQ_API_KEY")
+if not api_key:
+    raise RuntimeError("GROQ_API_KEY not set in environment variables.")
+
+client = Groq(api_key=api_key)
+@app.get("/")
+def ping():
+    return {"ping": "pong"}
+
 
 app.add_middleware(
     CORSMiddleware,
