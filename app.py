@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from groq import Groq
 import os
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -30,6 +30,7 @@ class User(Base):
     email = Column(String(120), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     google_id = Column(String(255), unique=True, nullable=True)
+    subscription = relationship("Subscription", back_populates="user", uselist=False)
 
 class Product(Base):
     __tablename__ = "products"
@@ -43,6 +44,7 @@ class Subscription(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     subscription_status = Column(Boolean, default=False)
+    user = relationship("User", back_populates="subscription")
 
 # Create database tables if they don't exist
 Base.metadata.create_all(bind=engine)
@@ -235,7 +237,10 @@ async def google_login(login_request: GoogleLoginRequest, db: Session = Depends(
 async def generate_quiz(req: QuizRequest, current_user: User = Depends(get_current_active_user)):
     input_limit = 1000  # Set the input limit for non-subscribed users
 
-    if not current_user.subscription_status and len(req.text) > input_limit:
+    # Check subscription status through the relationship
+    has_active_subscription = current_user.subscription and current_user.subscription.subscription_status
+    
+    if not has_active_subscription and len(req.text) > input_limit:
         raise HTTPException(status_code=403, detail=f"Input text limited to {input_limit} characters for non-subscribed users.")
 
     paragraphs = [p.strip() for p in req.text.split('\n\n') if p.strip()]

@@ -7,6 +7,7 @@ sqlalchemy
 werkzeug
 python-jose[cryptography]
 google-auth
+google-auth-oauthlib
 requests
 psycopg2
 python-multipart
