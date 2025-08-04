@@ -9,3 +9,4 @@ python-jose[cryptography]
 google-auth
 requests
 psycopg2
+python-multipart
