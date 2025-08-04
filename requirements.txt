@@ -7,3 +7,4 @@ sqlalchemy
 werkzeug
 python-jose[cryptography]
 google-auth
+requests
