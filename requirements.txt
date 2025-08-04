@@ -8,3 +8,4 @@ werkzeug
 python-jose[cryptography]
 google-auth
 requests
+psycopg2

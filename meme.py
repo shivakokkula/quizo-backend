@@ -757,3 +757,59 @@ HTML_TEMPLATE = """
 </body>
 </html>
 """
+
+@app.route('/register', methods=['POST'])
+def register():
+    """Register a new user"""
+    data = request.json()
+    user = db.register_user(data['email'], data['password'])
+    return {'user': user}
+
+@app.route('/login', methods=['POST'])
+def login():
+    """Login a user"""
+    data = request.json()
+    user = db.login_user(data['email'], data['password'])
+    return {'user': user}
+
+@app.route('/generate', methods=['POST'])
+def generate_meme():
+    """Generate a meme based on user input"""
+    data = request.json()
+    meme = meme_generator.generate_meme(data['text'])
+    return {'meme': meme}
+
+@app.route('/generate-template', methods=['POST'])
+def generate_template_meme():
+    """Generate a meme using a template"""
+    data = request.json()
+    meme = meme_generator.generate_template_meme(data['template_name'], data['texts'])
+    return {'meme': meme}
+
+@app.route('/', methods=['GET'])
+def index():
+    """Return the index page"""
+    return """
+    <html>
+    <head>
+        <title>MemeGen Pro</title>
+    </head>
+    <body>
+        <h1>MemeGen Pro</h1>
+        <p>Professional Meme Generator - No AI, Pure Code</p>
+        <a href="/pricing">Pricing</a>
+        <a href="/login">Login</a>
+        <a href="/register">Register</a>
+        <a href="/generate">Generate</a>
+        <a href="/generate-template">Generate Template</a>
+    </body>
+    </html>
+    """
+
+@app.route('/pricing', methods=['GET'])
+def pricing():
+    """Return the pricing page"""
+    return HTML_TEMPLATE
+
+if __name__ == '__main__':
+    app.run(debug=True)
