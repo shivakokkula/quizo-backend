@@ -11,3 +11,4 @@ google-auth-oauthlib
 requests
 psycopg2
 python-multipart
+razorpay
